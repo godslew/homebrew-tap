@@ -1,0 +1,63 @@
+name: Update Formula
+
+on:
+  repository_dispatch:
+    types: [released]
+
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update formula file
+        run: |
+          VERSION=$(echo ${{ github.event.client_payload.ref }} | sed -e "s#refs/tags/##g")
+          BINARY=${{ github.event.client_payload.binary }}
+          URL="https://github.com/godslew/$BINARY/releases/download/$VERSION/$BINARY"
+          cat <<EOF > Formula/$BINARY.rb
+          class ${{ github.event.client_payload.class }} < Formula
+            desc "Collect, search, and insert frequently used shell commands"
+            homepage "https://github.com/godslew/$BINARY"
+            url "$URL"
+            sha256 "${{ github.event.client_payload.sha256 }}"
+            license "MIT"
+
+            depends_on :macos
+
+            def install
+              bin.install "$BINARY"
+            end
+
+            def caveats
+              <<~EOS
+                To enable the keybinding (Ctrl+g), add the following to your ~/.zshrc:
+
+                  source <(gclip-cli --init)
+
+                Then restart your shell or run:
+
+                  source ~/.zshrc
+              EOS
+            end
+
+            test do
+              system "#{bin}/$BINARY", "--version"
+            end
+          end
+          EOF
+
+      - name: Commit version change
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          git commit -m "Update ${{ github.event.client_payload.binary }} to ${{ github.event.client_payload.ref }}"
+
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
