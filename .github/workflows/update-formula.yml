@@ -17,26 +17,29 @@ jobs:
         run: |
           VERSION=$(echo ${{ github.event.client_payload.ref }} | sed -e "s#refs/tags/##g")
           BINARY=${{ github.event.client_payload.binary }}
-          URL="https://github.com/godslew/$BINARY/releases/download/$VERSION/$BINARY"
-          cat <<EOF > Formula/$BINARY.rb
+          FORMULA=${{ github.event.client_payload.formula }}
+          ASSET=${{ github.event.client_payload.asset }}
+          REPO=${{ github.event.client_payload.repo }}
+          URL="https://github.com/${REPO}/releases/download/${VERSION}/${ASSET}"
+          cat <<EOF > Formula/${FORMULA}.rb
           class ${{ github.event.client_payload.class }} < Formula
             desc "Collect, search, and insert frequently used shell commands"
-            homepage "https://github.com/godslew/$BINARY"
-            url "$URL"
+            homepage "https://github.com/${REPO}"
+            url "${URL}"
             sha256 "${{ github.event.client_payload.sha256 }}"
             license "MIT"
 
             depends_on :macos
 
             def install
-              bin.install "$BINARY"
+              bin.install "${BINARY}"
             end
 
             def caveats
               <<~EOS
                 To enable the keybinding (Ctrl+g), add the following to your ~/.zshrc:
 
-                  source <(gclip-cli --init)
+                  source <(${BINARY} --init)
 
                 Then restart your shell or run:
 
@@ -45,7 +48,7 @@ jobs:
             end
 
             test do
-              system "#{bin}/$BINARY", "--version"
+              system "#{bin}/${BINARY}", "--version"
             end
           end
           EOF
@@ -55,7 +58,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add -A
-          git commit -m "Update ${{ github.event.client_payload.binary }} to ${{ github.event.client_payload.ref }}"
+          git commit -m "Update ${{ github.event.client_payload.formula }} to ${{ github.event.client_payload.ref }}"
 
       - name: Push changes
         uses: ad-m/github-push-action@master
