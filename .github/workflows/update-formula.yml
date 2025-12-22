@@ -23,32 +23,12 @@ jobs:
           URL="https://github.com/${REPO}/releases/download/${VERSION}/${ASSET}"
           cat <<EOF > Formula/${FORMULA}.rb
           class ${{ github.event.client_payload.class }} < Formula
-            desc "Collect, search, and insert frequently used shell commands"
             homepage "https://github.com/${REPO}"
             url "${URL}"
             sha256 "${{ github.event.client_payload.sha256 }}"
-            license "MIT"
-
-            depends_on :macos
 
             def install
               bin.install "${BINARY}"
-            end
-
-            def caveats
-              <<~EOS
-                To enable the keybinding (Ctrl+g), add the following to your ~/.zshrc:
-
-                  source <(${BINARY} --init)
-
-                Then restart your shell or run:
-
-                  source ~/.zshrc
-              EOS
-            end
-
-            test do
-              system "#{bin}/${BINARY}", "--version"
             end
           end
           EOF
